@@ -2,7 +2,7 @@
 
 Safeword is a simple, zero-dependency password manager I made for personal use.
 
-**WARNING: Don't use this, I have no idea how secure it is.**
+## WARNING: DO NOT USE THIS, I have no idea what I'm doing!!
 
 # Usage
 
