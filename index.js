@@ -1,52 +1,165 @@
+const {prompt, promptYN, showPassword, close} = require("./prompt.js");
+const {generatePassword} = require("./password-gen.js");
 const PasswordStore = require("./password-file.js");
-const {Writable} = require("stream");
-const readline = require("readline");
 const path = require("path");
-const fs = require("fs");
 const os = require("os");
 
-// figure out where the user wants to store their password file
-const PW_FILE_PATH = process.env.PW_FILE || path.join(os.homedir(), ".passwords");
+// handle quoted strings 
+const tokenize = str => {
+	
+	const tokens = [];
+	let curToken = "";
 
-// pass stdout through this stream so that we can disable logging when the user is entering passwords
-const muteableStream = new Writable({
-	write: function(chunk, encoding, callback) {
-		if(!this.muted) {
-			process.stdout.write(chunk, encoding);
+	let quote = false, // whether we're in a quoted string
+	    escape = false; // whether the char is escaped
+
+	for(let i = 0; i < str.length; i++) {
+		
+		const char = str[i];
+
+		if(escape) {
+			curToken += char;
+			escape = false;
+		} else {
+
+			// when we encounter whitespace, start a new token
+			if(!quote && char.match(/\s/)) {
+				if(curToken.length > 0) {
+					tokens.push(curToken);
+					curToken = "";
+				}
+			} else if(quote && char === '\\') {
+				escape = true; // handle escapes in quotes
+			} else if(char === '"') {
+				quote = !quote; // quote start/end
+			} else {
+				curToken += char;
+			}
 		}
-		callback();
-	}
-});
 
-const lineReader = readline.createInterface({input: process.stdin, output: muteableStream, terminal: true});
-const readPassword = question => new Promise((resolve, reject) => {
-	lineReader.question(question, password => {
-		muteableStream.muted = false;
-		console.log();
-		resolve(password);
-	});
-	muteableStream.muted = true;
-});
+	}
+
+	if(quote) {
+		throw new Error("Unterminated quote");
+	}
+
+	if(curToken.length > 0) {
+		tokens.push(curToken);
+	}
+
+	return tokens;
+
+};
+
+const getToken = tokens => {
+	const token = tokens.shift();
+	if(!token) {
+		throw new Error("Unexpected end of input");
+	}
+	return token;
+};
+
+
+const readFlags = tokens => {
+	
+	// flags
+	const flags = {
+		enterPassword: false,
+	    yes: false,
+		newPassword: false,
+		path: null
+	};
+
+	const nonFlagTokens = [];
+
+	// scan tokens for flags first
+	while(tokens.length > 0) {
+		const token = getToken(tokens);
+		if(token[0] === "-") {
+			if(token === "-e" || token === "--enter-password")
+				flags.enterPassword = true;
+			else if(token === "-y" || token === "--yes")
+				flags.yes = true;
+			else if(token === "-n" || token === "--new-password")
+				flags.newPassword = true;
+			else if(token === "-f" || token === "--file")
+				flags.path = getToken(tokens);
+			else
+				throw new Error(`Unknown flag "${token}"`);
+		} else {
+			nonFlagTokens.push(token);
+		}
+	}
+
+	return {flags, nonFlagTokens};
+
+};
+
+const execute = async (tokens, flags, passwordStore) => {
+
+	while(tokens.length > 0) {
+
+		const token = getToken(tokens);
+
+		if(token === "add") {
+			
+			const name = getToken(tokens);
+			if(passwordStore.exists(name)) {
+				if(!(flags.yes || await promptYN(`A password entry named "${name}" exists already. Overwrite`))) {
+					continue;
+				}
+				console.log("Overwriting existing entry...");
+			}
+
+			// generate password
+			let password;
+			if(flags.enterPassword) {
+				password = await prompt(`Password for ${name}: `, true);
+			} else {
+				password = await generatePassword(flags.yes);
+			}
+
+			passwordStore.setEntry(name, password);
+			await showPassword(name, password);
+
+		} else if(token === "remove") {
+			const name = getToken(tokens);
+			passwordStore.checkExistence(name);
+			if(flags.yes || await promptYN("Deleting a password entry is irreversible. Delete", false)) {
+				passwordStore.removeEntry(name);
+			}
+		} else if(token === "show") {
+			const name = getToken(tokens);
+			await showPassword(name, passwordStore.getEntry(name));
+		} else if(token === "list") {
+			const entries = passwordStore.getEntryNames();
+			console.log("Password entries:");
+			console.log(entries.map(name => `* ${name}`).join("\n"));
+		} else if(token === "import") {
+			throw new Error("Not implemented");
+		} else if(token[0] != "-") {
+			throw new Error(`Unexpected token "${token}"`);
+		}
+
+	}
+
+};
 
 (async () => {
 
-	const password = await readPassword("Password: ");
+	const tokens = process.argv.slice(2);
+	const {flags, nonFlagTokens} = readFlags(tokens);
+	const password = await prompt("Password: ", true);
+	const pwFilePath = flags.path || process.env.PW_FILE || path.join(os.homedir(), ".passwords");
 
-	let passwordStore;
-	if(!fs.existsSync(PW_FILE_PATH)) {
-		console.log(`A new password file will be created at ${PW_FILE_PATH}`);
-		passwordStore = new PasswordStore({password});
-	} else {
-		passwordStore = new PasswordStore({password, data: fs.readFileSync(PW_FILE_PATH)});
+	try {
+		const passwordStore = new PasswordStore({path: pwFilePath, password});
+		await execute(nonFlagTokens, flags, passwordStore);
+	} catch(error) {
+		console.error(error.message);
+		process.exit(1);
 	}
-
-	// read arguments with a state machine
 	
-
-	// save
-	passwordStore.data = {secret: Math.random()};
-	fs.writeFileSync(PW_FILE_PATH, passwordStore.serialize());
-
-	lineReader.close();
+	close();
 
 })();

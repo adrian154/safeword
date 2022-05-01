@@ -1,6 +1,6 @@
 # safeword
 
-Safeword is a simple, zero-dependency password manager I made for personal use.
+Safeword is a simple password manager I made for personal use.
 
 ## WARNING: DO NOT USE THIS, I have no idea what I'm doing!!
 
@@ -24,8 +24,8 @@ The following flags can be included:
 
 * `-e`, `--enter-password`: Safeword will prompt you for a password instead of generating a random one
 * `-y`, `--yes`: Safeword will not ask the user if they are really sure they want to delete a password
-* `-p`, `--prompt-password`: Safeword will prompt the user for a new master password when saving the password file.  
-* `-f <path>`: Use a specific password file.
+* `-n`, `--new-password`: Safeword will prompt the user for a new master password when saving the password file.  
+* `-f <path>`, `--file <path>`: Use a specific password file.
 
 ## Password File Location
 

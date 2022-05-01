@@ -1,5 +1,6 @@
 // All code related to manipulating password files is contained here
 const crypto = require("crypto");
+const fs = require("fs");
 
 // crypto constants
 const CIPHER = "chacha20-poly1305";
@@ -10,7 +11,8 @@ const CHACHA20_KEYLEN = 32;
 
 const deriveKey = (password, salt) => {
     console.log("Deriving key...");
-    return crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 1048576, r: 8, p: 1, maxmem: 2048 * 1024 * 1024});
+    //return crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 1048576, r: 8, p: 1, maxmem: 2048 * 1024 * 1024});
+    return crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 65536, r: 8, p: 1, maxmem: 256*65536*8});
 };
 
 // this code is absolutely not timing-safe, but as far as I can tell it doesn't matter since the nonce is readable by anyone
@@ -29,12 +31,22 @@ module.exports = class {
 
     constructor(options) {
 
-        if(options.data) {
-            this.deserialize(options.data, options.password);
+        this.path = options.path;
+        if(fs.existsSync(this.path)) {
+            this.deserialize(fs.readFileSync(this.path), options.password);
         } else {
+
+            if(options.throwIfNonexistent) {
+                throw new Error("Password file doesn't exist");
+            }
+
+            console.log(`A new password file will be created at ${this.path}`);
             this.salt = randomBytes(SALT_LENGTH);
             this.nonce = Buffer.alloc(NONCE_LENGTH);
             this.key = deriveKey(options.password, this.salt);
+            this.data = {};
+            this.save();
+
         }
 
     }
@@ -98,6 +110,39 @@ module.exports = class {
 
         return Buffer.concat([this.salt, this.nonce, cipher.getAuthTag(), ciphertext]);
 
+    }
+
+    save() {
+        fs.writeFileSync(this.path, this.serialize());
+    }
+
+    setEntry(name, password) {
+        this.data[name] = password;
+        this.save();
+    }
+
+    getEntry(name) {
+        this.checkExistence(name);
+        return this.data[name];
+    }
+
+    removeEntry(name) {
+        delete this.data[name];
+        this.save();
+    }
+
+    exists(name) {
+        return name in this.data;
+    }
+
+    getEntryNames() {
+        return Object.keys(this.data);
+    }
+
+    checkExistence(name) {
+        if(!this.exists(name)) {
+            throw new Error(`No entry named "${name}" exists`);
+        }
     }
 
 };
