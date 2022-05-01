@@ -27,6 +27,9 @@ Safeword is a simple password manager I made for personal use.
 `safeword resave <file>`
 * Save the password file with a new password
 
+`safeword interactive`
+* Launch an interactive session, where multiple commands can be entered.
+
 More than one operation can be specified at once, like this:
 
 `safeword add GitHub-new rm GitHub resave`

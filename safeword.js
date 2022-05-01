@@ -1,3 +1,4 @@
+#! /usr/bin/env node
 const {prompt, promptYN, showPassword, close} = require("./prompt.js");
 const {generatePassword} = require("./password-gen.js");
 const PasswordStore = require("./password-file.js");
@@ -156,6 +157,9 @@ const execute = async (tokens, flags, passwordStore) => {
 		} else if(token === "resave") {
 			const newPassword = await prompt("New password: ", true);
 			passwordStore.updatePassword(newPassword);
+			passwordStore.save();
+		} else if(token === "undump") {
+			passwordStore.data = JSON.parse(await prompt("json: "));
 			passwordStore.save();
 		} else if(token[0] != "-") {
 			throw new Error(`Unexpected token "${token}"`);

@@ -10,8 +10,13 @@ const AUTH_TAG_LENGTH = 16;
 const CHACHA20_KEYLEN = 32;
 
 const deriveKey = (password, salt) => {
-    //return crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 1048576, r: 8, p: 1, maxmem: 2048 * 1024 * 1024});
-    return crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 65536, r: 8, p: 1, maxmem: 256*65536*8});
+    const start = performance.now();
+    const key = crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 262144, r: 8, p: 1, maxmem: 130 * 262144 * 8});
+    const elapsed = performance.now() - start;
+    if(elapsed < 250) {
+        console.log("warning: key derivation took less than 250ms");
+    }
+    return key;
 };
 
 // this code is absolutely not timing-safe, but as far as I can tell it doesn't matter since the nonce is readable by anyone
