@@ -128,7 +128,7 @@ const execute = async (tokens, flags, passwordStore) => {
 			await showPassword(name, passwordStore.getEntry(name));
 		} else if(token === "list") {
 			const entries = passwordStore.getEntryNames();
-			console.log(entries.map(name => `- ${name}`).join("\n"));
+			console.log(entries.join("\n"));
 		} else if(token === "import") {
 			
 			const path = getToken(tokens);
