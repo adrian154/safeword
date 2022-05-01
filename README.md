@@ -9,7 +9,10 @@ Safeword is a simple password manager I made for personal use.
 `safeword add <name>`
 * Add a new password entry
 
-`safeword remove <name>`
+`safeword gen <name>`
+* Generate a new password
+
+`safeword rm <name>`
 * Delete a password entry
 
 `safeword show <name>`
@@ -21,16 +24,17 @@ Safeword is a simple password manager I made for personal use.
 `safeword import <file>`
 * Read passwords from another Safeword password file
 
+`safeword resave <file>`
+* Save the password file with a new password
+
 More than one operation can be specified at once, like this:
 
-`safeword add GitHub-new remove GitHub`
+`safeword add GitHub-new rm GitHub resave`
 
 The following flags can be included:
 
-* `-e`, `--enter-password`: Safeword will prompt you for a password instead of generating a random one
-* `-y`, `--yes`: Safeword will not ask the user if they are really sure they want to delete a password
-* `-n`, `--new-password`: Safeword will prompt the user for a new master password when saving the password file.  
-* `-f <path>`, `--file <path>`: Use a specific password file.
+* `-y`, `--yes`: All prompts will be answered with the default option
+* `-f <path>`, `--file <path>`: Use a specific password file
 
 ## Password File Location
 
@@ -54,6 +58,15 @@ Password files consist of the following fields, concatenated:
 | nonce    | 12             | ChaCha20 nonce, incremented with each encryption |
 | auth tag | 16             | Poly1305 authentication tag                      |
 | data     | variable       | Encrypted UTF-8 JSON                             |
+
+Passwords are stored in JSON as a set of key-value pairs:
+
+```
+{
+    "service1": "password",
+    "service2": "password2"
+}
+```
 
 The key used for encryption is derived from the password using scrypt with the following parameters: N=1048576, r=8, p=1.
 

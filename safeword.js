@@ -64,9 +64,7 @@ const readFlags = tokens => {
 	
 	// flags
 	const flags = {
-		enterPassword: false,
 	    yes: false,
-		newPassword: false,
 		path: null
 	};
 
@@ -76,12 +74,8 @@ const readFlags = tokens => {
 	while(tokens.length > 0) {
 		const token = getToken(tokens);
 		if(token[0] === "-") {
-			if(token === "-e" || token === "--enter-password")
-				flags.enterPassword = true;
-			else if(token === "-y" || token === "--yes")
+			if(token === "-y" || token === "--yes")
 				flags.yes = true;
-			else if(token === "-n" || token === "--new-password")
-				flags.newPassword = true;
 			else if(token === "-f" || token === "--file")
 				flags.path = getToken(tokens);
 			else
@@ -97,15 +91,11 @@ const readFlags = tokens => {
 
 const execute = async (tokens, flags, passwordStore) => {
 
-	if(flags.newPassword) {
-		passwordStore.updatePassword(await prompt("New password: ", true));
-	}
-
 	while(tokens.length > 0) {
 
 		const token = getToken(tokens);
 
-		if(token === "add") {
+		if(token === "add" || token === "gen") {
 			
 			const name = getToken(tokens);
 			if(passwordStore.exists(name)) {
@@ -117,7 +107,7 @@ const execute = async (tokens, flags, passwordStore) => {
 
 			// generate password
 			let password;
-			if(flags.enterPassword) {
+			if(token === "add") {
 				password = await prompt(`Password for ${name}: `, true);
 			} else {
 				password = await generatePassword(flags.yes);
@@ -126,7 +116,7 @@ const execute = async (tokens, flags, passwordStore) => {
 			passwordStore.setEntry(name, password);
 			await showPassword(name, password);
 
-		} else if(token === "remove") {
+		} else if(token === "rm") {
 			const name = getToken(tokens);
 			passwordStore.checkExistence(name);
 			if(flags.yes || await promptYN("Deleting a password entry is irreversible. Delete", false)) {
@@ -137,8 +127,7 @@ const execute = async (tokens, flags, passwordStore) => {
 			await showPassword(name, passwordStore.getEntry(name));
 		} else if(token === "list") {
 			const entries = passwordStore.getEntryNames();
-			console.log("Password entries:");
-			console.log(entries.map(name => `* ${name}`).join("\n"));
+			console.log(entries.map(name => `- ${name}`).join("\n"));
 		} else if(token === "import") {
 			
 			const path = getToken(tokens);
@@ -164,6 +153,10 @@ const execute = async (tokens, flags, passwordStore) => {
 					console.error(error.message);
 				}
 			}
+		} else if(token === "resave") {
+			const newPassword = await prompt("New password: ", true);
+			passwordStore.updatePassword(newPassword);
+			passwordStore.save();
 		} else if(token[0] != "-") {
 			throw new Error(`Unexpected token "${token}"`);
 		}
