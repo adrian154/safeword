@@ -10,7 +10,6 @@ const AUTH_TAG_LENGTH = 16;
 const CHACHA20_KEYLEN = 32;
 
 const deriveKey = (password, salt) => {
-    console.log("Deriving key...");
     //return crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 1048576, r: 8, p: 1, maxmem: 2048 * 1024 * 1024});
     return crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 65536, r: 8, p: 1, maxmem: 256*65536*8});
 };
@@ -49,6 +48,11 @@ module.exports = class {
 
         }
 
+    }
+    
+    updatePassword(password) {
+        this.salt = randomBytes(SALT_LENGTH);
+        this.key = deriveKey(password, this.salt);
     }
     
     // generate the 'associated data' 

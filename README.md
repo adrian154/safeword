@@ -6,15 +6,20 @@ Safeword is a simple password manager I made for personal use.
 
 # Usage
 
-`safeword add <name>`: add a new password entry
+`safeword add <name>`
+* Add a new password entry
 
-`safeword remove <name>`: delete a password entry
+`safeword remove <name>`
+* Delete a password entry
 
-`safeword show <name>`: show the password for a given entry
+`safeword show <name>`
+* Show the password for a given entry
 
-`safeword list`: list the names of password entries; passwords are not printed 
+`safeword list`
+* List the names of password entries; passwords are not printed 
 
-`safeword import <file>`: read passwords from another Safeword password file
+`safeword import <file>`
+* Read passwords from another Safeword password file
 
 More than one operation can be specified at once, like this:
 

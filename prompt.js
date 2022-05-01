@@ -20,11 +20,13 @@ const lineReader = readline.createInterface({
     terminal: true
 });
 
-const prompt = (question, hidden) => new Promise(resolve => {
+const prompt = (question, hidden, stay) => new Promise(resolve => {
 	lineReader.question(question, answer => {
 		if(hidden) {
 			muteableStream.muted = false;
-			console.log();
+            if(!stay) {
+			    console.log();
+            }
 		}
 		resolve(answer);
 	});
@@ -47,26 +49,11 @@ const clearline = () => {
 };
 
 let passwordShown;
-const showPassword = (service, password) => new Promise((resolve, reject) => {
-
-    let timeout = PW_TIMEOUT;
+const showPassword = async (service, password) => {
     passwordShown = true;
-
-    const fn = () => {
-        process.stdout.write(`\rPassword for ${service}: ${password} (clearing in ${timeout}s)`);
-        if(timeout > 0) {
-            timeout--;
-            setTimeout(fn, 1000);
-        } else {
-            passwordShown = false;
-            clearline();
-            resolve();
-        }
-    };
-
-    fn();
-
-});
+    await prompt(`Password for ${service}: ${password} (press enter to clear)`, true, true)
+    clearline();
+};
 
 process.on("SIGINT", () => {
     if(passwordShown) {

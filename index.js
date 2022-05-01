@@ -97,6 +97,10 @@ const readFlags = tokens => {
 
 const execute = async (tokens, flags, passwordStore) => {
 
+	if(flags.newPassword) {
+		passwordStore.updatePassword(await prompt("New password: ", true));
+	}
+
 	while(tokens.length > 0) {
 
 		const token = getToken(tokens);
@@ -152,6 +156,14 @@ const execute = async (tokens, flags, passwordStore) => {
 				
 			}
 
+		} else if(token === "interactive") {
+			while(true) {
+				try {
+					await execute(tokenize(await prompt("> ")), flags, passwordStore);
+				} catch(error) {
+					console.error(error.message);
+				}
+			}
 		} else if(token[0] != "-") {
 			throw new Error(`Unexpected token "${token}"`);
 		}
