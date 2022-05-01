@@ -108,7 +108,7 @@ const execute = async (tokens, flags, passwordStore) => {
 				if(!(flags.yes || await promptYN(`A password entry named "${name}" exists already. Overwrite`))) {
 					continue;
 				}
-				console.log("Overwriting existing entry...");
+				console.log("Overwriting existing entry");
 			}
 
 			// generate password
@@ -136,7 +136,22 @@ const execute = async (tokens, flags, passwordStore) => {
 			console.log("Password entries:");
 			console.log(entries.map(name => `* ${name}`).join("\n"));
 		} else if(token === "import") {
-			throw new Error("Not implemented");
+			
+			const path = getToken(tokens);
+			const otherPassword = await prompt("Password for other file: ", true);
+			const otherStore = new PasswordStore({path, password: otherPassword});
+			
+			for(const entry of otherStore.getEntryNames()) {
+				if(passwordStore.exists(entry)) {
+					if(!(flags.yes || await promptYN(`A password entry named "${entry}" exists already. Overwrite`))) {
+						continue;
+					}
+					console.log(`Replacing entry "${entry}" with password from imported file`);
+				}
+				passwordStore.setEntry(entry, otherStore.getEntry(entry));
+				
+			}
+
 		} else if(token[0] != "-") {
 			throw new Error(`Unexpected token "${token}"`);
 		}
