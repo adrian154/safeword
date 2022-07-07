@@ -18,16 +18,19 @@ Safeword is a simple password manager I made for personal use.
 `safeword show <name>`
 * Show the password for a given entry
 
-`safeword list`
+`safeword ls`
 * List the names of password entries; passwords are not printed 
 
 `safeword import <file>`
 * Read passwords from another Safeword password file
 
+`safeword importsafe <file>`
+* Same as `import`, but duplicate entries are skipped
+
 `safeword resave <file>`
 * Save the password file with a new password
 
-`safeword interactive`
+`safeword prompt`
 * Launch an interactive session, where multiple commands can be entered.
 
 More than one operation can be specified at once, like this:

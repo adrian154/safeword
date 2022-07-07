@@ -126,10 +126,10 @@ const execute = async (tokens, flags, passwordStore) => {
 		} else if(token === "show") {
 			const name = getToken(tokens);
 			await showPassword(name, passwordStore.getEntry(name));
-		} else if(token === "list") {
+		} else if(token === "ls") {
 			const entries = passwordStore.getEntryNames();
 			console.log(entries.join("\n"));
-		} else if(token === "import") {
+		} else if(token === "import" || token === "importsafe") {
 			
 			const path = getToken(tokens);
 			const otherPassword = await prompt("Password for other file: ", true);
@@ -137,16 +137,17 @@ const execute = async (tokens, flags, passwordStore) => {
 			
 			for(const entry of otherStore.getEntryNames()) {
 				if(passwordStore.exists(entry)) {
-					if(!(flags.yes || await promptYN(`A password entry named "${entry}" exists already. Overwrite`))) {
+					if(token === "importsafe") {
+						console.log(`Skipping "${entry}" since an entry already exists`);
+						continue;
+					} else if(!(flags.yes || await promptYN(`Overwrite password for "${entry}" with value from new file`))) {
 						continue;
 					}
-					console.log(`Replacing entry "${entry}" with password from imported file`);
 				}
 				passwordStore.setEntry(entry, otherStore.getEntry(entry));
-				
 			}
 
-		} else if(token === "interactive") {
+		} else if(token === "prompt") {
 			while(true) {
 				try {
 					await execute(tokenize(await prompt("> ")), flags, passwordStore);
@@ -157,9 +158,6 @@ const execute = async (tokens, flags, passwordStore) => {
 		} else if(token === "resave") {
 			const newPassword = await prompt("New password: ", true);
 			passwordStore.updatePassword(newPassword);
-			passwordStore.save();
-		} else if(token === "undump") {
-			passwordStore.data = JSON.parse(await prompt("json: "));
 			passwordStore.save();
 		} else if(token[0] != "-") {
 			throw new Error(`Unexpected token "${token}"`);
