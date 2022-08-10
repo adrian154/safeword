@@ -2,8 +2,6 @@
 
 Safeword is a simple password manager I made for personal use.
 
-## WARNING: DO NOT USE THIS, I have no idea what I'm doing!!
-
 # Usage
 
 `safeword add <name>`
@@ -25,13 +23,16 @@ Safeword is a simple password manager I made for personal use.
 * Read passwords from another Safeword password file
 
 `safeword importsafe <file>`
-* Same as `import`, but duplicate entries are skipped
+* Like `import`, but duplicate entries are skipped
 
 `safeword resave <file>`
 * Save the password file with a new password
 
 `safeword prompt`
 * Launch an interactive session, where multiple commands can be entered.
+
+`safeword dump`
+* Print out the full password file in plaintext. BE CAREFUL WITH THIS COMMAND!
 
 More than one operation can be specified at once, like this:
 
@@ -74,6 +75,6 @@ Passwords are stored in JSON as a set of key-value pairs:
 }
 ```
 
-The key used for encryption is derived from the password using scrypt with the following parameters: N=1048576, r=8, p=1.
+The key used for encryption is derived from the password using scrypt with the following parameters: N=262144, r=8, p=1.
 
 The associated data used to generate the auth tag consists of the salt and nonce, concatenated.

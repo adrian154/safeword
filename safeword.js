@@ -2,6 +2,7 @@
 const {prompt, promptYN, showPassword, close} = require("./prompt.js");
 const {generatePassword} = require("./password-gen.js");
 const PasswordStore = require("./password-file.js");
+const child_process = require("child_process");
 const path = require("path");
 const os = require("os");
 
@@ -90,6 +91,18 @@ const readFlags = tokens => {
 
 };
 
+const copyToClipboard = text => {
+	if(process.platform === "win32") {
+		const clip = child_process.spawn("clip");
+		clip.stdin.end(text);
+		return new Promise(resolve => {
+			clip.on("close", resolve);
+		});
+	} else {
+		console.log(`Sorry, but clipboard support is not yet available on your platform (${process.platform})`);
+	}
+};
+
 const execute = async (tokens, flags, passwordStore) => {
 
 	while(tokens.length > 0) {
@@ -114,8 +127,8 @@ const execute = async (tokens, flags, passwordStore) => {
 				password = await generatePassword(flags.yes);
 			}
 
-			passwordStore.setEntry(name, password);
-			await showPassword(name, password);
+			const description = await prompt(`Description for ${name} (optional): `);
+			passwordStore.setEntry(name, {password, description});
 
 		} else if(token === "rm") {
 			const name = getToken(tokens);
@@ -125,10 +138,20 @@ const execute = async (tokens, flags, passwordStore) => {
 			}
 		} else if(token === "show") {
 			const name = getToken(tokens);
-			await showPassword(name, passwordStore.getEntry(name));
+			const entry = passwordStore.getEntry(name);
+			console.log(`Description for ${name}: ${entry.name}`);
+			await showPassword(entry.password);
+		} else if(token === "info") {
+			const name = getToken(tokens);
+			const entry = passwordStore.getEntry(name);
+			console.log(`Description for ${name}: ${entry.name}`);
 		} else if(token === "ls") {
 			const entries = passwordStore.getEntryNames();
-			console.log(entries.join("\n"));
+			console.log(entries.sort().map(str => "\u001b[92m" + str + "\u001b[39m").join("\n"));
+		} else if(token === "copy") {
+			const name = getToken(tokens);
+			const password = passwordStore.getEntry(name);
+			await copyToClipboard(password);
 		} else if(token === "import" || token === "importsafe") {
 			
 			const path = getToken(tokens);
@@ -159,6 +182,8 @@ const execute = async (tokens, flags, passwordStore) => {
 			const newPassword = await prompt("New password: ", true);
 			passwordStore.updatePassword(newPassword);
 			passwordStore.save();
+		} else if(token === "dump") {
+			console.log(JSON.stringify(passwordStore.data));
 		} else if(token[0] != "-") {
 			throw new Error(`Unexpected token "${token}"`);
 		}

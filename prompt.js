@@ -49,9 +49,9 @@ const clearline = () => {
 };
 
 let passwordShown;
-const showPassword = async (service, password) => {
+const showPassword = async password => {
     passwordShown = true;
-    await prompt(`Password for ${service}: ${password} (press enter to clear)`, true, true)
+    await prompt(`Password: ${password} (press enter to clear)`, true, true)
     clearline();
 };
 

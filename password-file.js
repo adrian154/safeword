@@ -14,13 +14,11 @@ const deriveKey = (password, salt) => {
     const key = crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 262144, r: 8, p: 1, maxmem: 130 * 262144 * 8});
     const elapsed = performance.now() - start;
     if(elapsed < 250) {
-        console.log("warning: key derivation took less than 250ms");
+        console.log("warning: key derivation took less than 250ms, you should probably adjust the SCrypt parameters");
     }
     return key;
 };
 
-// this code is absolutely not timing-safe, but as far as I can tell it doesn't matter since the nonce is readable by anyone
-// or maybe it does matter. i don't know anything about cryptography. *please* don't use this app, not that I expect anyone to
 const incrementNonce = nonce => {
     let i = 0;
     do {
@@ -92,14 +90,14 @@ module.exports = class {
         try {
             decipher.final();
         } catch(error) {
-            throw new Error("Decryption failed, your password is probably wrong");
+            throw new Error("Decryption failed, your password is wrong or the password file is corrupted");
         }
 
         // parse json
         try {
             this.data = JSON.parse(plaintext.toString("utf-8"));
         } catch(error) {
-            throw new Error("Invalid JSON, the password file is probably corrupted");
+            throw new Error("Invalid JSON, the password file was corrupted");
         }
 
     }
@@ -125,8 +123,8 @@ module.exports = class {
         fs.writeFileSync(this.path, this.serialize());
     }
 
-    setEntry(name, password) {
-        this.data[name] = password;
+    setEntry(name, entry) {
+        this.data[name] = entry;
         this.save();
     }
 
