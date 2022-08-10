@@ -144,7 +144,7 @@ const execute = async (tokens, flags, passwordStore) => {
 		} else if(token === "info") {
 			const name = getToken(tokens);
 			const entry = passwordStore.getEntry(name);
-			console.log(`Description for ${name}: ${entry.name}`);
+			console.log(`Description for ${name}: ${entry.description}`);
 		} else if(token === "ls") {
 			const entries = passwordStore.getEntryNames();
 			console.log(entries.sort().map(str => "\u001b[92m" + str + "\u001b[39m").join("\n"));
