@@ -4,20 +4,26 @@ Safeword is a simple password manager I made for personal use.
 
 # Usage
 
+`safeword ls`
+* List the names of password entries; passwords are not printed 
+
 `safeword add <name>`
 * Add a new password entry
 
 `safeword gen <name>`
 * Generate a new password
 
-`safeword rm <name>`
-* Delete a password entry
-
 `safeword show <name>`
 * Show the password for a given entry
 
-`safeword ls`
-* List the names of password entries; passwords are not printed 
+`safeword copy <name>`
+* Copy a password to the clipboard; currently only supported on Windows.
+
+`safeword info <name>`
+* Print the description for a password.
+
+`safeword rm <name>`
+* Delete a password entry
 
 `safeword import <file>`
 * Read passwords from another Safeword password file
@@ -70,8 +76,14 @@ Passwords are stored in JSON as a set of key-value pairs:
 
 ```
 {
-    "service1": "password",
-    "service2": "password2"
+    "service1": {
+        "password": "...",
+        "description": "..."
+    },
+    "service2": {
+        "password": "...",
+        "description": "..."
+    }
 }
 ```
 
