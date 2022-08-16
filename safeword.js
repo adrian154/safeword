@@ -93,7 +93,7 @@ const readFlags = tokens => {
 
 const copyToClipboard = text => {
 	if(process.platform === "win32") {
-		const clip = child_process.spawn("clip");
+		const clip = child_process.spawn("C:\\Windows\\System32\\clip.exe");
 		clip.stdin.end(text);
 		return new Promise(resolve => {
 			clip.on("close", resolve);
@@ -150,8 +150,8 @@ const execute = async (tokens, flags, passwordStore) => {
 			console.log(entries.sort().map(str => "\u001b[92m" + str + "\u001b[39m").join("\n"));
 		} else if(token === "copy") {
 			const name = getToken(tokens);
-			const password = passwordStore.getEntry(name);
-			await copyToClipboard(password);
+			const entry = passwordStore.getEntry(name);
+			await copyToClipboard(entry.password);
 		} else if(token === "import" || token === "importsafe") {
 			
 			const path = getToken(tokens);
