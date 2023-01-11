@@ -28,7 +28,7 @@ Safeword is a simple password manager I made for personal use.
 `safeword import <file>`
 * Read passwords from another Safeword password file
 
-`safeword importsafe <file>`
+`safeword import-new <file>`
 * Like `import`, but duplicate entries are skipped
 
 `safeword resave <file>`
@@ -46,7 +46,6 @@ More than one operation can be specified at once, like this:
 
 The following flags can be included:
 
-* `-y`, `--yes`: All prompts will be answered with the default option
 * `-f <path>`, `--file <path>`: Use a specific password file
 
 ## Password File Location
@@ -55,11 +54,11 @@ The password file is located at `~/.passwords` by default. You can change the lo
 
 ## Syncing
 
-Safeword doesn't implement a synchronization mechanism. It is recommended that you use Git to sync the password file. This has one pitfall, however: Git isn't able to manually resolve merge conflicts in the encrypted password file automatically. If a merge conflict occurs, here's how you can resolve it:
+Safeword doesn't implement a synchronization mechanism. It is recommended that you use Git to sync the password file. To resolve conflicts, set up Safeword as a custom mergetool:
 
-* Run `git mergetool`.
-* Import the remote password file into the current one: `safeword import passwords.REMOTE`
-* If conflicting password entries are found, Safeword will ask you which you'd like to keep.
+```
+git config --global mergetool.safeword.cmd 'safeword -f "$LOCAL" import "$REMOTE" save-to "$MERGED"'
+```
 
 # Password Storage
 

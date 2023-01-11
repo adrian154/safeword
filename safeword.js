@@ -165,6 +165,10 @@ const execute = async (tokens, passwordStore) => {
 			const newPassword = await prompt("New password: ", true);
 			passwordStore.updatePassword(newPassword);
 			passwordStore.save();
+		} else if(token === "save-to") {
+			const newPath = getToken(tokens);
+			passwordStore.path = newPath;
+			passwordStore.save();
 		} else if(token === "dump") {
 			console.log(JSON.stringify(passwordStore.data));
 		}

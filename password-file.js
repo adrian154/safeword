@@ -92,7 +92,6 @@ module.exports = class {
         try {
             decipher.final();
         } catch(error) {
-            console.error(error);
             throw new Error("Decryption failed, your password is wrong or the password file is corrupted");
         }
 
