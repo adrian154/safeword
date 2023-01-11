@@ -3,18 +3,18 @@ const crypto = require("crypto");
 const fs = require("fs");
 
 // crypto constants
-const CIPHER = "chacha20-poly1305";
-const SALT_LENGTH = 16;
-const NONCE_LENGTH = 12;
-const AUTH_TAG_LENGTH = 16;
-const CHACHA20_KEYLEN = 32;
+const CIPHER = "chacha20-poly1305",
+      SALT_LENGTH = 16,
+      NONCE_LENGTH = 12,
+      AUTH_TAG_LENGTH = 16,
+      CHACHA20_KEYLEN = 32;
 
 const deriveKey = (password, salt) => {
     const start = performance.now();
     const key = crypto.scryptSync(password, salt, CHACHA20_KEYLEN, {N: 262144, r: 8, p: 1, maxmem: 130 * 262144 * 8});
     const elapsed = performance.now() - start;
     if(elapsed < 250) {
-        console.log("warning: key derivation took less than 250ms, you should probably adjust the SCrypt parameters");
+        console.warn("!!! KEY DERIVATION TOOK UNDER 250 MILLISECONDS !!!\nYou should probably adjust the SCrypt parameters.");
     }
     return key;
 };
@@ -35,7 +35,7 @@ module.exports = class {
 
         this.path = options.path;
         if(fs.existsSync(this.path)) {
-            this.deserialize(fs.readFileSync(this.path), options.password);
+            this.decrypt(fs.readFileSync(this.path), options.password);
         } else {
 
             if(options.throwIfNonexistent) {
@@ -43,9 +43,7 @@ module.exports = class {
             }
 
             console.log(`A new password file will be created at ${this.path}`);
-            this.salt = randomBytes(SALT_LENGTH);
-            this.nonce = Buffer.alloc(NONCE_LENGTH);
-            this.key = deriveKey(options.password, this.salt);
+            this.updatePassword(options.password);
             this.data = {};
             this.save();
 
@@ -55,6 +53,7 @@ module.exports = class {
     
     updatePassword(password) {
         this.salt = randomBytes(SALT_LENGTH);
+        this.nonce = Buffer.alloc(NONCE_LENGTH);
         this.key = deriveKey(password, this.salt);
     }
     
@@ -63,11 +62,14 @@ module.exports = class {
         return Buffer.concat([this.salt, this.nonce]);
     }
 
-    deserialize(data, password) {
+    decrypt(data, password) {
 
         let pos = 0;
         const read = bytes => {
             const result = data.slice(pos, pos + bytes);
+            if(result.length != bytes) {
+                throw new Error("Unexpectedly reached end of data, file is most likely corrupted");
+            }
             pos += bytes;
             return result;
         };
@@ -90,6 +92,7 @@ module.exports = class {
         try {
             decipher.final();
         } catch(error) {
+            console.error(error);
             throw new Error("Decryption failed, your password is wrong or the password file is corrupted");
         }
 
@@ -97,14 +100,14 @@ module.exports = class {
         try {
             this.data = JSON.parse(plaintext.toString("utf-8"));
         } catch(error) {
-            throw new Error("Invalid JSON, the password file was corrupted");
+            throw new Error("Invalid JSON");
         }
 
     }
 
-    serialize() {
+    save() {
 
-        // we increment the nonce instead of randomly generating it since it's too short (64 bits)
+        // the nonce must be incremented; encrypting twice with the same nonce is catastrophic
         this.nonce = incrementNonce(this.nonce);
 
         const plaintext = JSON.stringify(this.data).toString("utf-8");
@@ -115,16 +118,32 @@ module.exports = class {
         const ciphertext = cipher.update(plaintext);
         cipher.final();
 
-        return Buffer.concat([this.salt, this.nonce, cipher.getAuthTag(), ciphertext]);
+        fs.writeFileSync(this.path, Buffer.concat([
+            this.salt,
+            this.nonce,
+            cipher.getAuthTag(),
+            ciphertext
+        ]));
 
     }
 
-    save() {
-        fs.writeFileSync(this.path, this.serialize());
+    exists(name) {
+        return this.data[name];
+    }
+
+    checkExistence(name) {
+        if(!this.data[name]) {
+            throw new Error(`No entry named "${name}" exists`);
+        }
     }
 
     setEntry(name, entry) {
         this.data[name] = entry;
+        this.save();
+    }
+
+    removeEntry(name) {
+        delete this.data[name];
         this.save();
     }
 
@@ -133,23 +152,8 @@ module.exports = class {
         return this.data[name];
     }
 
-    removeEntry(name) {
-        delete this.data[name];
-        this.save();
-    }
-
-    exists(name) {
-        return name in this.data;
-    }
-
     getEntryNames() {
         return Object.keys(this.data);
-    }
-
-    checkExistence(name) {
-        if(!this.exists(name)) {
-            throw new Error(`No entry named "${name}" exists`);
-        }
     }
 
 };

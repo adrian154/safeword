@@ -6,18 +6,16 @@ const child_process = require("child_process");
 const path = require("path");
 const os = require("os");
 
-// handle quoted strings 
+// handle quoted strings
 const tokenize = str => {
 	
 	const tokens = [];
 	let curToken = "";
 
 	let quote = false, // whether we're in a quoted string
-	    escape = false; // whether the char is escaped
+	    escape = false; // should the current character be escaped?
 
-	for(let i = 0; i < str.length; i++) {
-		
-		const char = str[i];
+	for(const char of str) {
 
 		if(escape) {
 			curToken += char;
@@ -66,28 +64,25 @@ const readFlags = tokens => {
 	
 	// flags
 	const flags = {
-	    yes: false,
 		path: null
 	};
 
-	const nonFlagTokens = [];
+	const filteredTokens = [];
 
 	// scan tokens for flags first
 	while(tokens.length > 0) {
 		const token = getToken(tokens);
 		if(token[0] === "-") {
-			if(token === "-y" || token === "--yes")
-				flags.yes = true;
-			else if(token === "-f" || token === "--file")
+			if(token === "-f" || token === "--file")
 				flags.path = getToken(tokens);
 			else
 				throw new Error(`Unknown flag "${token}"`);
 		} else {
-			nonFlagTokens.push(token);
+			filteredTokens.push(token);
 		}
 	}
 
-	return {flags, nonFlagTokens};
+	return {flags, filteredTokens};
 
 };
 
@@ -103,7 +98,7 @@ const copyToClipboard = text => {
 	}
 };
 
-const execute = async (tokens, flags, passwordStore) => {
+const execute = async (tokens, passwordStore) => {
 
 	while(tokens.length > 0) {
 
@@ -112,11 +107,10 @@ const execute = async (tokens, flags, passwordStore) => {
 		if(token === "add" || token === "gen") {
 			
 			const name = getToken(tokens);
-			if(passwordStore.exists(name)) {
-				if(!(flags.yes || await promptYN(`A password entry named "${name}" exists already. Overwrite`))) {
+			if(passwordStore.data[name]) {
+				if(!await promptYN(`A password entry named "${name}" exists already. Overwrite`)) {
 					continue;
 				}
-				console.log("Overwriting existing entry");
 			}
 
 			// generate password
@@ -124,27 +118,25 @@ const execute = async (tokens, flags, passwordStore) => {
 			if(token === "add") {
 				password = await prompt(`Password for ${name}: `, true);
 			} else {
-				password = await generatePassword(flags.yes);
+				password = await generatePassword();
 			}
 
 			const description = await prompt(`Description for ${name} (optional): `);
-			passwordStore.setEntry(name, {password, description});
+			passwordStore.setEntry(name, {password, description, timestamp: Date.now()});
 
 		} else if(token === "rm") {
 			const name = getToken(tokens);
 			passwordStore.checkExistence(name);
-			if(flags.yes || await promptYN("Deleting a password entry is irreversible. Delete", false)) {
+			if(await promptYN("Deleting a password entry is irreversible. Delete", false)) {
 				passwordStore.removeEntry(name);
 			}
-		} else if(token === "show") {
-			const name = getToken(tokens);
-			const entry = passwordStore.getEntry(name);
-			console.log(`Description for ${name}: ${entry.name}`);
-			await showPassword(entry.password);
-		} else if(token === "info") {
+		} else if(token === "show" || token === "info") {
 			const name = getToken(tokens);
 			const entry = passwordStore.getEntry(name);
 			console.log(`Description for ${name}: ${entry.description}`);
+			if(token === "show") {
+				await showPassword(entry.password);
+			}
 		} else if(token === "ls") {
 			const entries = passwordStore.getEntryNames();
 			console.log(entries.sort().map(str => "\u001b[92m" + str + "\u001b[39m").join("\n"));
@@ -152,40 +144,29 @@ const execute = async (tokens, flags, passwordStore) => {
 			const name = getToken(tokens);
 			const entry = passwordStore.getEntry(name);
 			await copyToClipboard(entry.password);
-		} else if(token === "import" || token === "importsafe") {
+		} else if(token === "import" || token === "import-new") {
 			
 			const path = getToken(tokens);
 			const otherPassword = await prompt("Password for other file: ", true);
 			const otherStore = new PasswordStore({path, password: otherPassword});
 			
-			for(const entry of otherStore.getEntryNames()) {
-				if(passwordStore.exists(entry)) {
-					if(token === "importsafe") {
-						console.log(`Skipping "${entry}" since an entry already exists`);
-						continue;
-					} else if(!(flags.yes || await promptYN(`Overwrite password for "${entry}" with value from new file`))) {
+			for(const entryName of otherStore.getEntryNames()) {
+				const entry = otherStore.getEntry(entryName);
+				if(passwordStore.exists(entryName)) {
+					const existingEntry = passwordStore.getEntry(entryName);
+					if(token === "import-new" || !await promptYN(`Overwrite password for "${entryName}" with ${entry.timestamp < existingEntry.timestamp ? "older" : "newer"} value from imported file`)) {
 						continue;
 					}
 				}
-				passwordStore.setEntry(entry, otherStore.getEntry(entry));
+				passwordStore.setEntry(entryName, entry);
 			}
 
-		} else if(token === "prompt") {
-			while(true) {
-				try {
-					await execute(tokenize(await prompt("> ")), flags, passwordStore);
-				} catch(error) {
-					console.error(error.message);
-				}
-			}
 		} else if(token === "resave") {
 			const newPassword = await prompt("New password: ", true);
 			passwordStore.updatePassword(newPassword);
 			passwordStore.save();
 		} else if(token === "dump") {
 			console.log(JSON.stringify(passwordStore.data));
-		} else if(token[0] != "-") {
-			throw new Error(`Unexpected token "${token}"`);
 		}
 
 	}
@@ -195,13 +176,23 @@ const execute = async (tokens, flags, passwordStore) => {
 (async () => {
 
 	const tokens = process.argv.slice(2);
-	const {flags, nonFlagTokens} = readFlags(tokens);
+	const {flags, filteredTokens} = readFlags(tokens);
 	const password = await prompt("Password: ", true);
 	const pwFilePath = flags.path || process.env.PW_FILE || path.join(os.homedir(), ".passwords");
 
 	try {
 		const passwordStore = new PasswordStore({path: pwFilePath, password});
-		await execute(nonFlagTokens, flags, passwordStore);
+		if(filteredTokens.length > 0) {
+			await execute(filteredTokens, passwordStore);
+		} else {
+			while(true) {
+				try {
+					await execute(tokenize(await prompt("> ")), passwordStore);
+				} catch(error) {
+					console.error(error.message);
+				}
+			}
+		}
 	} catch(error) {
 		console.error(error.message);
 		process.exit(1);

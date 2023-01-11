@@ -1,9 +1,6 @@
 const {Writable} = require("stream");
 const readline = require("readline");
 
-// how long a password is shown
-const PW_TIMEOUT = 5;
-
 // pass stdout through this stream so that we can disable logging when the user is entering passwords
 const muteableStream = new Writable({
 	write: function(chunk, encoding, callback) {

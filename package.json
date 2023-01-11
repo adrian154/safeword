@@ -1,0 +1,25 @@
+{
+  "name": "safeword",
+  "version": "1.0.0",
+  "description": "A crappy password manager",
+  "main": "safeword.js",
+  "scripts": {
+    "build": "pkg safeword.js -o bin/safeword -t win-x64,macos-x64,linux-x64"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adrian154/safeword.git"
+  },
+  "keywords": [
+    "password"
+  ],
+  "author": "adrianz",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/adrian154/safeword/issues"
+  },
+  "homepage": "https://github.com/adrian154/safeword#readme",
+  "devDependencies": {
+    "pkg": "^5.8.0"
+  }
+}
